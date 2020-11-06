@@ -2,7 +2,7 @@ library(shiny)
 library(shinythemes)
 library(shiny)
 library(readxl)
-library(ICPIHelpers)
+#library(ICPIHelpers)
 library(tidyverse)
 library(rpivotTable)
 library(tidytext)
@@ -10,6 +10,23 @@ library(DT)
 library(reshape2)
 
 options(shiny.maxRequestSize=4000*1024^2)
+
+msd_import <- function(msd_txt){
+  
+  df <- read_delim(msd_txt, 
+                   "\t", 
+                   escape_double = FALSE,
+                   trim_ws = TRUE,
+                   col_types = cols(.default = col_character(), 
+                                    targets = col_double(),
+                                    qtr1 = col_double(),
+                                    qtr2 = col_double(),
+                                    qtr3 = col_double(),
+                                    qtr4 = col_double(),
+                                    cumulative = col_double()
+                                    ) 
+                   )
+}
 
 shinyServer(function(input, output) {
   
@@ -78,9 +95,7 @@ shinyServer(function(input, output) {
     if (is.null(inFile))
       return(NULL)
     
-    new_msd <- read_new_msd(inFile$datapath,
-                            save_rds = FALSE,
-                            remove_txt = FALSE)
+    new_msd <- msd_import(inFile$datapath)
     
     new_msd <- pivot_longer(new_msd,
                             targets:cumulative,
