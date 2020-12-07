@@ -23,9 +23,12 @@ library(reshape2)
 ## Tokenize the words in each narrative
 
 ```{r}
+Narratives_FY2020_Q3_Pre_Cleaning <- read.csv(file = 'LIWC2015 Q3 MER Narratives COVID HRH Dispense GBV Condoms Words Results Pre-Cleaning.csv', stringsAsFactors = FALSE)
+names(Narratives_FY2020_Q3_Pre_Cleaning) <- gsub("\\.", " ", names(Narratives_FY2020_Q3_Pre_Cleaning))
 test <- Narratives_FY2020_Q3_Pre_Cleaning %>%
   mutate(row_num = 1:n()) %>%
   unnest_tokens(word, Narrative)
+
 ```
 
 ## Remove stop words
@@ -229,6 +232,21 @@ Potential if_idf options:
 
 
 ```{r}
+num_narratives = nrow(Narratives_FY2020_Q3_Pre_Cleaning)
+
+tf_idf_calc <- Narratives_FY2020_Q3_Pre_Cleaning %>%
+  mutate(row_num = 1:n()) %>%
+  unnest_tokens(word, Narrative) %>%
+  anti_join(stop_words) %>%
+  mutate(covid = if_else(word %in% icpi_covid_list, 1, 0)) %>%
+  group_by_at(vars(-word, -covid)) %>%
+  summarise(total = n(),
+            covid_n = sum(covid)) %>%
+  ungroup() %>%
+  mutate(covid_tf = covid_n/ total) %>%
+  mutate(covid_idf = ifelse(covid_n == 0, 0, log(num_narratives/covid_n))) %>%
+  mutate(covid_tfidf = covid_tf * covid_idf)
+
 narrative_words <- Narratives_FY2020_Q3_Pre_Cleaning %>%
   #mutate(row_num = 1:n()) %>%
   unnest_tokens(word, Narrative) %>%
@@ -413,7 +431,9 @@ trigrams_separated
 
 ```{r}
 icpi_covid_list <- c(
+  "apart",
   "covid19",
+  "covid-19",
   "covid",
   "lockdown",
   "social",
