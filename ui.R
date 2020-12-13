@@ -2,12 +2,13 @@ library(shiny)
 library(shinythemes)
 library(shiny)
 library(readxl)
-library(ICPIHelpers)
+# library(ICPIHelpers)
 library(tidyverse)
 library(rpivotTable)
 library(tidytext)
 library(DT)
 library(reshape2)
+library(wordcloud)
 
 shinyUI(navbarPage(theme = shinytheme("simplex"),
                    
@@ -20,14 +21,18 @@ shinyUI(navbarPage(theme = shinytheme("simplex"),
                                               multiple = FALSE),
                                     fileInput("import1", "Choose MSD File (txt)",
                                               multiple = FALSE),
+                                    selectInput("ou_list", "Choose Operating Unit",
+                                                choices = NULL),
+                                    selectInput("indicator_list", "Choose Indicator",
+                                                choices = NULL),
                                     actionButton("display","Analyze!")),
                        mainPanel(
                          tags$h1("Narratives Triangulation Tool"),
                          tags$h3("Introduction"),
                          p("This tool triangulates Monitoring, Evaluation, and Reporting (MER) narratives with indicator results.
-                                  The Narratives Traingulation Tool takes in MER Narratives and MER Structured Datasets (MSD) providing cross-filtering between the two data sources.
-                                  Once the required data sources have been imported, the pivot table visualizer can be used to investigate the content of the selected narrative using the MER indicators.
-                                  This tool also has advanced features for textual analysis of the narratives including sentiment analysis, tf-idf, n-grams and correlations."),
+                           The Narratives Traingulation Tool takes in MER Narratives and MER Structured Datasets (MSD) providing cross-filtering between the two data sources.
+                           Once the required data sources have been imported, the pivot table visualizer can be used to investigate the content of the selected narrative using the MER indicators.
+                           This tool also has advanced features for textual analysis of the narratives including sentiment analysis, tf-idf, n-grams and correlations."),
                          hr(),
                          tags$h3("Instructions"),
                          p("1. Upload your narratives file (.xlsx)"),
@@ -42,14 +47,16 @@ shinyUI(navbarPage(theme = shinytheme("simplex"),
                          tags$h3("Questions?"),
                          p("Randy Yee (pcx5@cdc.gov)"),
                          p("CDC/GDIT | CGH | DGHT | HIDMSB | DUAT-ICPI")
+                         )
                        )
-                     )
                      
-                   ),
+                     ),
                    navbarMenu("Narratives",
                               tabPanel("Narratives Explorer",
                                        DT::dataTableOutput('narrativesdt')),
-                              tabPanel("Narrative Trends")
+                              tabPanel("Narrative Trends"),
+                              tabPanel("Resources",
+                                       DT::dataTableOutput('bingdt'))
                    ),
                    navbarMenu("Narrative Analysis",
                               tabPanel("Sentiment Analysis",
@@ -67,7 +74,7 @@ shinyUI(navbarPage(theme = shinytheme("simplex"),
                                        p("The following plots show the relative contribution of each word to the overall indicator bundle."),
                                        plotOutput("sentiment_ou_contribution", height = "800px"),
                                        plotOutput("sentiment_ou_contribution_ind")
-                              ),
+                                       ),
                               tabPanel("Wordclouds",
                                        tags$h2("Introduction"),
                                        p("Word clouds showing top positive and negative words. 
@@ -80,7 +87,15 @@ shinyUI(navbarPage(theme = shinytheme("simplex"),
                                        p("Comparison word cloud showing the top positive and negative sentiments of the selected operating unit and indicator."),
                                        plotOutput("compare_cloud_ouind")
                                        ),
-                              tabPanel("tf-idf"),
+                              tabPanel("TF IDF",
+                                       tags$h2("Introduction"),
+                                       p("TF-IDF is a statistical measure that evaluates how relevant a word is to a Narrative in a collection of Narratives. 
+                                         TF stands for Term Frequency, which means how many times a word appears in a Narrative.
+                                         IDF is Inverse Document Frequency of a word across the set of MER Narratives.
+                                         By multiplying these values, we get the TF-IDF measure. The higher this measure, the more relevant a term is in those documents"),
+                                       tags$h2("TF-IDF Comparison by OUs"),
+                                       p("Presenting the OUs with the highest occurences of COVID related words.", DT::dataTableOutput('tfidfdt')),
+                              ),
                               tabPanel("N-grams and Correlations"),
                               tabPanel("Latent Dirichlet Allocation")
                    ),
