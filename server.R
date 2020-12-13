@@ -320,6 +320,8 @@ shinyServer(function(input, output, session) {
       "quarantine" 
     )
     
+    narratives_df <- narratives()
+    
     num_narratives = nrow(narratives_df)
     
     tf_idf_calc <- narratives_df %>%
@@ -336,6 +338,8 @@ shinyServer(function(input, output, session) {
       mutate(covid_tfidf = covid_tf * covid_idf) %>%
       group_by(`Operating Unit`) %>%
       summarise('Total Words' = sum(total), 'Covid Words' = sum(covid_n), 'Covid TF' = sum(covid_tf), 'COVID IDF' = sum(covid_idf), 'TFIDF' = mean(covid_tfidf))
+    
+    tf_idf_calc <- tf_idf_calc[order(-tf_idf_calc$TFIDF),]
     
     DT::datatable(tf_idf_calc, 
                   selection = "single",
