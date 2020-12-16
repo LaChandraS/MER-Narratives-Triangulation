@@ -12,7 +12,7 @@ TODOs:
 
 ## Import libraries
 
-```{r}
+```{r, echo=F}
 library(tidytext)
 library(tidyverse)
 library(scales)
@@ -20,13 +20,24 @@ library(wordcloud)
 library(reshape2)
 ```
 
+
+## Import Narratives
+
+```{r}
+narratives_df <- read_excel("Narratives FY2020 Q4 Pre-Cleaning.xlsx", 
+    skip = 6)
+```
+
+
 ## Tokenize the words in each narrative
 
 ```{r}
-test <- Narratives_FY2020_Q3_Pre_Cleaning %>%
+test <- narratives_df %>%
   mutate(row_num = 1:n()) %>%
   unnest_tokens(word, Narrative)
+head(test)
 ```
+
 
 ## Remove stop words
 
@@ -35,7 +46,9 @@ test <- Narratives_FY2020_Q3_Pre_Cleaning %>%
 #data("stop_words")
 test <- test %>%
   anti_join(stop_words)
+head(stop_words)
 ```
+
 
 ## Find most common words
 Need to remove common HIV words
@@ -43,7 +56,9 @@ Need to remove common HIV words
 ```{r}
 test2 <- test %>%
   count(word, sort = T)
+test2
 ```
+
 
 ## Plot word frequency
 
@@ -71,8 +86,6 @@ frequency <- test %>%
   filter(!str_detect(`Operating Unit`,"Office of U.S. Foreign Assistance Resources")) %>%
   spread(`Operating Unit`, proportion) %>%
   gather(`Operating Unit`, proportion, `Angola`:`Zimbabwe`)
-
-
 all_freq <- test %>%
   #mutate(word = str_extract(word, "[a-z']+")) %>%
   filter(!str_detect(`Operating Unit`,"Office of U.S. Foreign Assistance Resources")) %>%
@@ -94,6 +107,7 @@ positive <- get_sentiments("bing") %>%
   filter(word != "positive") %>%
   filter(word != "positives")
 ```
+
 
 ## Filter for one OU and merge positive sentiment words
 
@@ -117,7 +131,6 @@ test %>%
 
 ```{r}
 # TODO: Need to edit for PEPFAR, HIV/AIDS
-
 bing <- get_sentiments("bing")%>%
   filter(word != "positive") %>%
   filter(word != "positives") %>%
@@ -193,7 +206,7 @@ test %>%
 ## Sentiments by sentence
 
 ```{r}
-narrative_sent <- Narratives_FY2020_Q3_Pre_Cleaning %>% 
+narrative_sent <- narratives_df %>% 
   unnest_tokens(sentence, Narrative, token = "sentences")
 narrative_sent$sentence[2]
 ```
@@ -203,11 +216,9 @@ narrative_sent$sentence[2]
 ```{r}
 bingnegative <- get_sentiments("bing") %>%
   filter(sentiment == "negative")
-
 wordcounts <- test %>%
   group_by_at(vars(-word)) %>%
   summarize(words = n())
-
 test %>%
   semi_join(bingnegative) %>%
   group_by_at(vars(-word)) %>%
@@ -229,18 +240,33 @@ Potential if_idf options:
 
 
 ```{r}
-narrative_words <- Narratives_FY2020_Q3_Pre_Cleaning %>%
+num_narratives = nrow(narratives_df)
+
+# Create ICPI Covid list before running this code
+tf_idf_calc <- narratives_df %>%
+  mutate(row_num = 1:n()) %>%
+  unnest_tokens(word, Narrative) %>%
+  anti_join(stop_words) %>%
+  mutate(covid = if_else(word %in% icpi_covid_list, 1, 0)) %>%
+  group_by_at(vars(-word, -covid)) %>%
+  summarise(total = n(),
+            covid_n = sum(covid)) %>%
+  ungroup() %>%
+  mutate(covid_tf = covid_n/ total) %>%
+  mutate(covid_idf = ifelse(covid_n == 0, 0, log(num_narratives/covid_n))) %>%
+  mutate(covid_tfidf = covid_tf * covid_idf) %>%
+  group_by(`Operating Unit`) %>%
+  summarise(total = sum(total), covid_n = sum(covid_n), covid_tf = sum(covid_tf), covid_idf = sum(covid_idf), covid_tfidf = mean(covid_tfidf))
+
+narrative_words <- narratives_df %>%
   #mutate(row_num = 1:n()) %>%
   unnest_tokens(word, Narrative) %>%
   #unite("title", `Operating Unit`:`Fiscal Quarter`, sep = ";") %>%
   count(`Operating Unit`, word, sort = TRUE)
-
 total_words <- narrative_words %>%
   group_by(`Operating Unit`) %>%
   summarize(total = sum(n))
-
 narrative_words <- left_join(narrative_words, total_words)
-
 narrative_words
 ```
 
@@ -261,7 +287,6 @@ freq_by_rank <- narrative_words %>%
     rank = row_number(),
     `term frequency` = n/total
   )
-
 freq_by_rank
 ```
 
@@ -280,7 +305,6 @@ freq_by_rank %>%
 ```{r}
 rank_subset <- freq_by_rank %>%
   filter(rank < 500, rank > 10)
-
 lm(log10(`term frequency`) ~ log10(rank), data = rank_subset)
 ```
 
@@ -300,7 +324,6 @@ freq_by_rank %>%
 ```{r}
 narrative_words <- narrative_words %>%
   bind_tf_idf(word, `Operating Unit`, n)
-
 narrative_words
 ```
 
@@ -317,9 +340,8 @@ narrative_words %>%
 ## Tokenize by n-gram
 
 ```{r}
-narratives_bigrams <- Narratives_FY2020_Q3_Pre_Cleaning %>%
+narratives_bigrams <- narratives_df %>%
   unnest_tokens(bigram, Narrative, token = "ngrams", n = 2)
-
 narratives_bigrams
 ```
 
@@ -336,16 +358,13 @@ TODO: need to remove common bigrams like "reporting period"
 ```{r}
 bigrams_separated <- narratives_bigrams %>%
   separate(bigram, c("word1", "word2", sep = " "))
-
 bigrams_filtered <- bigrams_separated %>%
   filter(!word1 %in% stop_words$word) %>%
   filter(!word2 %in% stop_words$word)%>%
   filter(!is.na(word1) & !is.na(word2))
-
 bigram_counts <- bigrams_filtered %>%
   unite(bigram, word1, word2, sep = " ") %>%
   count(bigram, sort = T)
-
 bigram_counts
 ```
 
@@ -356,10 +375,10 @@ TODO: Implement for app user
 m = 3 #
 word_list <- mapply(function(y) paste0("word", y), 1:m)
 #word_list <- append(word_list, ", sep = \" \" ")
-narratives_ngrams <- Narratives_FY2020_Q3_Pre_Cleaning %>%
+narratives_ngrams <- narratives_df %>%
+  filter(`Operating Unit` != "\nOffice of U.S. Foreign Assistance Resources") %>%
   unnest_tokens(ngram, Narrative, token = "ngrams", n = m) %>%
   separate(ngram, word_list)
-
 narratives_ngrams
 ```
 
@@ -367,11 +386,9 @@ narratives_ngrams
 
 ```{r}
 covid_words <- c("covid", "coronavirus", "covid-19")
-
 bigrams_filtered %>%
   filter(word2 %in% covid_words) %>%
   count(`Operating Unit`, word1, sort = T) 
-
 bigrams_filtered %>%
   filter(word1 %in% covid_words) %>%
   count(`Operating Unit`, word2, sort = T) %>%
@@ -382,31 +399,61 @@ bigrams_filtered %>%
 
 ```{r}
 bigram_tf_idf <- bigrams_filtered %>%
+  filter(word2 %in% covid_words) %>%
   unite(bigram, "word1", "word2", sep = " ") %>%
   count(`Operating Unit`, bigram) %>%
   bind_tf_idf(bigram, `Operating Unit`, n) %>%
   arrange(desc(tf_idf))
-
 bigram_tf_idf
 ```
 
-## Bigrams for sentiment analysis
+```{r}
+narratives_ngrams %>%
+  filter(!word1 %in% stop_words$word) %>%
+  filter(!word2 %in% stop_words$word) %>%
+  filter(!word3 %in% stop_words$word) %>%
+  filter(!is.na(word1) & !is.na(word2) & !is.na(word3)) %>%
+  filter(word2 %in% covid_words) %>%
+  unite(bigram, "word1", "word2", "word3", sep = " ") %>%
+  count(`Operating Unit`, bigram) %>%
+  bind_tf_idf(bigram, `Operating Unit`, n) %>%
+  arrange(desc(tf_idf))
+```
+
+
+## Bigrams for sentiment analysis (Using AFINN)
 
 ```{r}
+AFINN <- get_sentiments("afinn")
+AFINN
+```
+
+
+```{r}
+not_words <- bigrams_separated %>%
+  filter(word1 == "not") %>%
+  inner_join(AFINN, by = c(word2 = "word")) %>%
+  count(word2, value, sort = TRUE)
 bigrams_separated %>%
   filter(word1 %in% c("not", "no")) %>%
   count(word1, word2, sort = T)
 ```
 
 ```{r}
-trigrams_separated <- Narratives_FY2020_Q3_Pre_Cleaning %>%
+trigrams_separated <- narratives_df %>%
   unnest_tokens(ngram, Narrative, token = "ngrams", n = 4) %>%
   separate(ngram, c("word1", "word2", "word3", "word4", sep = " "))%>%
   filter(word1 %in% c("not", "no")) %>%
   count(word1, word2, word3, word4, sort = T)
-
 trigrams_separated
 ```
+
+```{r}
+bigrams_filtered %>%
+  filter(word2 == "street") %>%
+  count(book, word1, sort = TRUE)
+```
+
 
 ============================================================================
 # 5) LIWC
@@ -423,8 +470,7 @@ icpi_covid_list <- c(
   "isolate",
   "quarantine" 
 )
-
-liwc_summary <- Narratives_FY2020_Q3_Pre_Cleaning %>%
+liwc_summary <- narratives_df %>%
   mutate(row_num = 1:n()) %>%
   unnest_tokens(word, Narrative) %>%
   mutate(covid = if_else(word %in% icpi_covid_list, 1, 0)) %>%
@@ -432,7 +478,9 @@ liwc_summary <- Narratives_FY2020_Q3_Pre_Cleaning %>%
   summarise(total = n(),
             covid_n = sum(covid)) %>%
   ungroup() %>%
-  mutate(covid_per = covid_n/ total)
+  mutate(covid_per = covid_n/ total) %>%
+  group_by(`Operating Unit`) %>%
+  summarise(final_col = mean(covid_per))
   
 liwc_summary
 ```
@@ -441,6 +489,4 @@ liwc_summary
 # 6) VL Table Analysis
 
 ```{r}
-
 ```
-
