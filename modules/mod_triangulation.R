@@ -15,10 +15,12 @@ triangulation_ui <- function(id){
             ),
             
             tabBox(width = 12,
-              tabPanel("Narratives",
-                       dataTableOutput(ns("narrativesdt"))),
-              tabPanel("Pivot Table",
-                       rpivotTableOutput(ns("filter_msd_df")))
+                   tabPanel("Narratives",
+                            dataTableOutput(ns("narrativesdt"))),
+                   tabPanel("Pivot Table",
+                            div(style = 'overflow-y: scroll',
+                                rpivotTableOutput(ns("filter_msd_df"))
+                            ))
             )
   )
 }
@@ -53,15 +55,15 @@ triangulation_server <- function(id, n_df, m_df){
     # User selection through datatable
     row_count          <- reactive({input$narrativesdt_rows_selected}) 
     operatingunit_name <- reactive({req(row_count()) 
-                                    narratives()[[row_count(), 1]]}) 
+      narratives()[[row_count(), 1]]}) 
     indicator_name     <- reactive({req(row_count())
-                                    narratives()[[row_count(), 5]]})
+      narratives()[[row_count(), 5]]})
     im_name            <- reactive({req(row_count())
-                                    narratives()[[row_count(), 8]]})
+      narratives()[[row_count(), 8]]})
     support_name       <- reactive({req(row_count())
-                                    narratives()[[row_count(), 6]]})
+      narratives()[[row_count(), 6]]})
     narratives_content <- reactive({req(row_count())
-                                    narratives()[[row_count(), 12]]})
+      narratives()[[row_count(), 12]]})
     
     # Narratives summary after user selection
     output$title <- renderText({
