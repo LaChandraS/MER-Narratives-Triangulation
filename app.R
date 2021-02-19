@@ -33,6 +33,9 @@ source("./modules/mod_resources.R")
 source("./modules/mod_triangulation.R")
 
 #### Text Resources ####
+
+gs4_deauth()
+
 bing <-       read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing",
                          sheet = "HIV Sentiments (based on Bing et al.)")
 
