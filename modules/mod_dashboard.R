@@ -4,6 +4,8 @@ dashboard_ui <- function(id){
   
   fluidPage(
     
+    tags$style(type="text/css", "body { overflow-y: scroll; }"),
+    
     ui_updater_ui(ns("ui")),
     
     fluidRow(width = 12,
@@ -16,7 +18,7 @@ dashboard_ui <- function(id){
              infoBox(width = 3,
                      title = "Most Positive",
                      div(style="font-size:10px;",
-                         uiOutput(ns("global_sent_max"))
+                         uiOutput(ns("max_overall"))
                      ),
                      icon = icon("thumbs-up"),
                      color = "green",
@@ -25,7 +27,7 @@ dashboard_ui <- function(id){
              infoBox(width = 3,
                      title = "Most Negative",
                      div(style="font-size:10px;",
-                         uiOutput(ns("global_sent_min"))
+                         uiOutput(ns("min_overall"))
                      ),
                      icon = icon("thumbs-down"),
                      color = "red",
@@ -41,18 +43,16 @@ dashboard_ui <- function(id){
     ),
     fluidRow(width = 12,
              box(width = 6,
-                 height = "auto",
                  title = "Sentiments",
                  status = "primary",
                  solidHeader = T,
                  plotOutput(ns("sentimentplot"))
              ),
              box(width = 6,
-                 #height = "600px",
-                 title = "TF-IDF",
+                 title = "Sentiment Contributions",
                  status = "primary",
                  solidHeader = T,
-                DT::dataTableOutput(ns("tfidf_df"))
+                 plotOutput(ns("contribution"))
              )
     ),
     fluidRow(width = 12,
@@ -70,116 +70,103 @@ dashboard_ui <- function(id){
              )
     ),
     fluidRow(width = 12,
-             box(width = 12, 
-                 title = "Narratives",
-                 status = "warning",
-                 solidHeader = T,
-                 DT::dataTableOutput(ns("narrativesdt")))
-    ))
+             tabBox(width = 12, 
+                    tabPanel("TF_IDF", DT::dataTableOutput(ns("tfidf_df"))),
+                    tabPanel("Narratives", DT::dataTableOutput(ns("narrativesdt")))
+             )
+    )
+  )
   
 }
 
 
 
-dashboard_server <- function(id, n_df, sentiment, stop){
+dashboard_server <- function(id, n_df, prep_dfs){
   
   moduleServer(id, function(input, output, session){
     
     # Resources
-    narratives <- reactive({n_df})
-    bing       <- reactive({sentiment})
-    stopwords  <- reactive({stop})
+    narratives     <- reactive({n_df})
+    prepared_dfs   <- reactive({prep_dfs})
     
     # Sub-Modules
-    subn_df    <- ui_updater_server("ui", narratives()) # Narratives Subset
+    ui_info        <- ui_updater_server("ui", narratives()) # Narratives Subset
     
     # Sub-Module Outputs
     output$narrativesdt <- DT::renderDataTable({
       
-      DT::datatable(subn_df()[,c(1,3,5,6,7,12)], 
-        rownames=FALSE,
-        filter="top",
-        options = list(
-          searchHighlight = TRUE,
-          scroller = TRUE,
-          scrollX = TRUE,
-          scrollY = 700))
+      DT::datatable(ui_info[[1]]()[,c(1,3,5,6,7,12)],
+                    rownames=FALSE,
+                    filter="top",
+                    options = list(
+                      searchHighlight = TRUE,
+                      scroller = TRUE,
+                      scrollX = TRUE,
+                      scrollY = 700))
       
     })
+    
+    
+    # /////////////////////////////////////////////////////////////////////////////////////////
+    # bigram df
+    
+    prepared_bigram <- reactive({ 
+      prepared_dfs()[[1]] %>%
+        filter(if(ui_info[[2]]() != "All") (`Operating Unit`   == ui_info[[2]]()) else TRUE) %>%
+        filter(if(ui_info[[3]]() != "All") (`Indicator Bundle` == ui_info[[3]]()) else TRUE) %>%
+        filter(if(ui_info[[4]]() != "All") (`Indicator`        == ui_info[[4]]()) else TRUE)
+    })
+    
+    prepared_sent <- reactive({ 
+      prepared_dfs()[[2]] %>%
+        filter(if(ui_info[[2]]() != "All") (`Operating Unit`   == ui_info[[2]]()) else TRUE) %>%
+        filter(if(ui_info[[3]]() != "All") (`Indicator Bundle` == ui_info[[3]]()) else TRUE) %>%
+        filter(if(ui_info[[4]]() != "All") (`Indicator`        == ui_info[[4]]()) else TRUE)
+    })
+    
+    prepared_sent_c <- reactive({ 
+      prepared_bigram() %>% prepare_sent_contributes()
+    })
+    
     
     # /////////////////////////////////////////////////////////////////////////////////////////
     # Sentiments
-    sentiment_df <- reactive({
-      
-      subn_df() %>%
-        unnest_tokens(word, Narrative)%>%
-        anti_join(stopwords()) %>%
-        inner_join(bing()) %>%
-        count(`Operating Unit`, `Indicator Bundle`, Indicator, sentiment) %>%
-        spread(sentiment, n, fill = 0) %>%
-        mutate(sentiment = positive - negative)
-      
-    })
     
+    summaries <- reactive({ sent_summary(prepared_sent()) })
+    
+    ## Infoboxes
     output$sentimentscore <- renderText({
       
-      format(as.numeric(sum(sentiment_df()$sentiment, na.rm = T)), big.mark=",")
+      format(as.numeric(sum(prepared_sent()$sentiment, na.rm = T)), big.mark=",")
       
     })
     
-    ou_sum <- reactive({
-      sentiment_df() %>%
-        group_by(`Operating Unit`) %>%
-        summarize(total = sum(sentiment, na.rm = T)) %>%
-        ungroup
-    })
-
-    ib_sum <- reactive({
-      sentiment_df() %>%
-        group_by(`Operating Unit`, `Indicator Bundle`) %>%
-        summarize(total = sum(sentiment, na.rm = T)) %>%
-        ungroup
-    })
-
-    in_sum <- reactive({
-      sentiment_df() %>%
-        group_by(`Operating Unit`, `Indicator Bundle`, `Indicator`) %>%
-        summarize(total = sum(sentiment, na.rm = T)) %>%
-        ungroup
-    })
-    
-    output$global_sent_min <- renderUI({
+    output$min_overall <- renderUI({
       
-      HTML(
-        paste(
-          ou_sum()$`Operating Unit`[ou_sum()$total   == min(ou_sum()$total)],
-          ib_sum()$`Indicator Bundle`[ib_sum()$total == min(ib_sum()$total)],
-          in_sum()$`Indicator`[in_sum()$total        == min(in_sum()$total)], 
-          sep = "<br/>"
-        )
-      )
+      summaries()[[1]]
       
     })
     
-    output$global_sent_max <- renderUI({
+    output$max_overall <- renderUI({
       
-      HTML(
-        paste(
-          ou_sum()$`Operating Unit`[ou_sum()$total   == max(ou_sum()$total)],
-          ib_sum()$`Indicator Bundle`[ib_sum()$total == max(ib_sum()$total)],
-          in_sum()$`Indicator`[in_sum()$total        == max(in_sum()$total)], 
-          sep = "<br/>"
-        )
-      )
+      summaries()[[2]]
       
     })
     
+    output$trending <- renderText({        
+      str_to_title((prepared_bigram() %>%
+                      count(ngram, sort = T) %>%
+                      top_n(1))$ngram[[1]])
+    })
+    
+    
+    ## Plots
     output$sentimentplot <- renderPlot({
       
-      if(length(unique(sentiment_df()$`Indicator Bundle`)) == 1) {
+      if(length(unique(prepared_bigram()$`Indicator Bundle`)) == 1) {
         
-        ggplot(sentiment_df() %>% 
-                 group_by(`Operating Unit`, `Indicator Bundle`, `Indicator`) %>% 
+        ggplot(prepared_sent() %>%
+                 group_by(`Operating Unit`, `Indicator Bundle`, `Indicator`) %>%
                  summarise(sentiment = sum(sentiment,na.rm = T)) %>%
                  ungroup(), aes(`Indicator`, sentiment, fill = `Indicator`)) +
           geom_col(show.legend = T, na.rm = T) +
@@ -193,13 +180,14 @@ dashboard_server <- function(id, n_df, sentiment, stop){
                 panel.grid.major.x = element_blank(),
                 panel.background   = element_blank(),
                 plot.background    = element_blank(),
-                legend.background  = element_blank())
+                legend.background  = element_blank(),
+                legend.title       = element_blank())
         
       } else {
         
-        ggplot(sentiment_df() %>% 
-                 group_by(`Operating Unit`, `Indicator Bundle`) %>% 
-                 summarise(sentiment = sum(sentiment,na.rm = T)) %>% 
+        ggplot(prepared_sent() %>%
+                 group_by(`Operating Unit`, `Indicator Bundle`) %>%
+                 summarise(sentiment = sum(sentiment,na.rm = T)) %>%
                  ungroup(), aes(`Indicator Bundle`, sentiment, fill = `Indicator Bundle`)) +
           geom_col(show.legend = T, na.rm = T) +
           facet_wrap(~`Operating Unit`, scales = "free_x") +
@@ -212,8 +200,33 @@ dashboard_server <- function(id, n_df, sentiment, stop){
                 panel.grid.major.x = element_blank(),
                 panel.background   = element_blank(),
                 plot.background    = element_blank(),
-                legend.background  = element_blank())
+                legend.background  = element_blank(),
+                legend.title       = element_blank())
       }
+      
+    }, bg = "transparent")
+    
+    output$contribution <- renderPlot({
+      
+      
+      ggplot(prepared_sent_c(), aes(ngram, n, fill = sentiment), environment=environment()) +
+        geom_col() +
+        coord_flip() +
+        scale_x_discrete(guide=guide_axis(n.dodge=2)) +
+        #facet_wrap(~`sentiment`, scales = "free_y") +
+        theme_linedraw() +
+        theme(axis.title.x       = element_blank(),
+              axis.title.y       = element_blank(),
+              axis.text.x        = element_blank(),
+              axis.ticks.x       = element_blank(),
+              panel.grid.minor.x = element_blank(),
+              panel.grid.major.x = element_blank(),
+              panel.background   = element_blank(),
+              plot.background    = element_blank(),
+              legend.background  = element_blank(),
+              legend.title       = element_blank(),
+              legend.position    = "top")
+      
       
     }, bg = "transparent")
     
@@ -222,7 +235,8 @@ dashboard_server <- function(id, n_df, sentiment, stop){
     
     output$bigramviz <- renderPlot({
       
-      count_bigrams(subn_df(), stopwords()) %>%
+      prepared_bigram() %>%
+        count(word1, word2, sort = T) %>%
         top_n(50) %>%
         visualize_bigrams()
       
@@ -235,26 +249,37 @@ dashboard_server <- function(id, n_df, sentiment, stop){
     output$tfidf_df <- DT::renderDataTable({
       
       DT::datatable(
-        prepare_bigrams(subn_df(), stopwords()) %>%
+        prepared_bigram() %>%
+          count(Name, ngram, sort = T) %>%
           bind_tf_idf(ngram, Name, n) %>%
           arrange(desc(tf_idf)) %>%
           mutate(tf     = round(tf,     2),
                  idf    = round(idf,    2),
-                 tf_idf = round(tf_idf, 2)),
+                 tf_idf = round(tf_idf, 2)) %>%
+          separate(Name, c("Operating Unit", "Indicator Bundle", "Indicator"), sep = "\\|"),
         rownames=FALSE,
+        filter="top",
         options = list(
-          searchHighlight = TRUE, scrollY = TRUE)
+          searchHighlight = TRUE,
+          scroller = TRUE,
+          scrollX = TRUE,
+          scrollY = 700)
       )
       
     })
     
+    # /////////////////////////////////////////////////////////////////////////////////////////
+    # Wordcloud
+    
     output$wordcloudy <- renderWordcloud2({
       
-      wordcloud2(
-        count_bigrams(subn_df(), stopwords()) %>%
-          unite(word, word1, word2, sep = " ") %>%
-          rename("freq" = "n"), 
-        color = "black", 
+      wordcloud2a(
+        prepared_bigram() %>%
+          count(ngram, sort = T) %>%
+          #top_n(50) %>%
+          rename("word" = "ngram") %>%
+          rename("freq" = "n"),
+        color = "black",
         backgroundColor = "transparent"
       )
       

@@ -6,12 +6,15 @@ impact_ui <- function(id){
     ui_updater_ui(ns("ui_b")),
     fluidRow(box(width = 3, 
                  status = "warning",
-                 textInput(ns("term"), "Term", "low|decrease|decreased"))),
-    fluidRow(box(width = 12,
-                 title = "Impact",
-                 status = "primary",
-                 solidHeader = T,
-                 dataTableOutput(ns("narratives_sentences"))))
+                 numericInput(ns("ngram"), "Ngram", value=2, min = 1, max = NA, step = 1)),
+             box(width = 3, 
+                 status = "warning",
+                 textInput(ns("term"), "Sentence Filter (uses regex)", "\blow|decrease|decreased"))
+    ),
+    fluidRow(tabBox(width = 12,
+                    tabPanel("Ngrams", dataTableOutput(ns("narratives_ngrams"))),
+                    tabPanel("Sentences", dataTableOutput(ns("narratives_sentences")))
+    ))
   )
   
   
@@ -24,15 +27,40 @@ impact_server <- function(id, n_df){
     
     narratives <- reactive({n_df})
     term       <- reactive({input$term})
-    subn_df    <- ui_updater_server("ui_b", narratives()) # Narratives Subset
+    ui_info    <- ui_updater_server("ui_b", narratives()) # Narratives Subset
+    
+    ngram_num  <- reactive({input$ngram})
+    
+    output$narratives_ngrams <- renderDataTable({
+      
+      DT::datatable(
+        ui_info[[1]]() %>%
+          unnest_tokens(ngram, Narrative, token = "ngrams", n = ngram_num()) %>%
+          unite("Name", c("Operating Unit", "Org Level", "Organisation Site")) %>%
+          select(-c("Fiscal Year", "Fiscal Quarter", "Metrics")),
+        
+        rownames=FALSE,
+        filter="top")
+      
+    })
     
     output$narratives_sentences <- renderDataTable({
-      subn_df() %>%
-        unnest_tokens(sentence, Narrative, token = "sentences") %>%
-        filter(str_detect(sentence, paste0("\\b",term(),"\\b"))) %>%
-        group_by(`Operating Unit`,`Indicator Bundle`, Indicator) %>%
-        summarise(Sentences = paste0(sentence, collapse = "| + |")) %>%
-        ungroup()
+      
+      DT::datatable(
+        ui_info[[1]]() %>%
+          unnest_tokens(sentence, Narrative, token = "sentences") %>%
+          filter(str_detect(sentence, term())) %>%
+          group_by(`Operating Unit`,`Org Level`, `Organisation Site`, `Indicator Bundle`, Indicator, `Support Type`, `Funding Mechanism`, `Implementing Mechanism`) %>%
+          summarise(Sentences = paste0(sentence, collapse = "[...]")) %>%
+          ungroup() %>%
+          unite("Name", c("Operating Unit", "Org Level", "Organisation Site")), 
+        
+        rownames=FALSE,
+        filter="top",
+        options = list(
+          searchHighlight = TRUE)
+      )
+      
     })
     
   })

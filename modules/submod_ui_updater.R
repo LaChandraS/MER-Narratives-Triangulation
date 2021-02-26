@@ -4,16 +4,16 @@ ui_updater_ui <- function(id){
   
   ns <- NS(id)
   
-    fluidRow(width = 12,
-             box(width = 3, selectInput(ns("ou_list"),        "Operating Unit",
-                                        choices = "All")),
-             box(width = 3, selectInput(ns("area_list"),      "Program Area",
-                                        choices = "All")),
-             box(width = 3, selectInput(ns("indicator_list"), "Indicator",
-                                        choices = "All")),
-             box(width = 3, selectInput(ns("period_list"),    "Period",
-                                        choices = "All"))
-    )
+  fluidRow(width = 12,
+           box(width = 3, selectInput(ns("ou_list"),        "Operating Unit",
+                                      choices = "All")),
+           box(width = 3, selectInput(ns("area_list"),      "Program Area",
+                                      choices = "All")),
+           box(width = 3, selectInput(ns("indicator_list"), "Indicator",
+                                      choices = "All")),
+           box(width = 3, selectInput(ns("period_list"),    "Period",
+                                      choices = "All"))
+  )
   
 }
 
@@ -64,7 +64,14 @@ ui_updater_server <- function(id, n_df){
     
     ui_df <- reactive({narratives_sub()})
     
-    return(ui_df)
+    return(    
+      list(
+        ui_df,
+        ou_label,
+        area_label,
+        ind_label
+      ))
     
   })
+  
 }

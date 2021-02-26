@@ -5,7 +5,7 @@ triangulation_ui <- function(id){
   fluidPage(width = 12,
             fluidRow(width = 12,
                      ui_updater_ui(ns("ui_a"))),
-            fluidRow(width = 3,
+            fluidRow(width = 12,
                      box(width = 3, 
                          title = "Summary",
                          textOutput(ns("title"))),
@@ -34,11 +34,11 @@ triangulation_server <- function(id, n_df, m_df){
     msd <- reactive({m_df})
     
     # Sub-Modules
-    ui_df <- ui_updater_server("ui_a", narratives())
+    ui_info <- ui_updater_server("ui_a", narratives())
     
     # Sub-Module Outputs
     output$narrativesdt <- DT::renderDataTable({
-      DT::datatable(ui_df()[,c(1,3,5,6,7,12)], # Pass UI selector input?
+      DT::datatable(ui_info[[1]]()[,c(1,3,5,6,7,12)], # Pass UI selector input?
                     selection = "single",
                     rownames=FALSE,
                     filter="top",
