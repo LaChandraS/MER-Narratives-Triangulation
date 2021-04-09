@@ -39,8 +39,12 @@ impact_server <- function(id, n_df){
           unite("Name", c("Operating Unit", "Org Level", "Organisation Site")) %>%
           select(-c("Fiscal Year", "Fiscal Quarter", "Metrics")),
         
-        rownames=FALSE,
-        filter="top")
+        extensions = 'Buttons',
+        #rownames=FALSE,
+        #filter="top",
+        options = list(searchHighlight = TRUE,
+                       dom = 'Bfrtip',
+                       buttons = c('copy', 'csv', 'excel')))
       
     })
     
@@ -55,10 +59,13 @@ impact_server <- function(id, n_df){
           ungroup() %>%
           unite("Name", c("Operating Unit", "Org Level", "Organisation Site")), 
         
-        rownames=FALSE,
-        filter="top",
+        extensions = 'Buttons',
+        #rownames=FALSE,
+        #filter="top",
         options = list(
-          searchHighlight = TRUE)
+          searchHighlight = TRUE,
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel'))
       )
       
     })

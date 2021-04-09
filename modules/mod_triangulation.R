@@ -14,6 +14,12 @@ triangulation_ui <- function(id){
                          textOutput(ns("content")))
             ),
             
+            fluidRow(width = 12,
+                     box(width = 12, 
+                         title = "Instructions",
+                         p("Click on 1 row in the NARRATIVES tab in order to display results in the MSD tab."))
+            ),
+            
             tabBox(width = 12,
                    tabPanel("Narratives",
                             dataTableOutput(ns("narrativesdt"))),
