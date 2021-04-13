@@ -25,7 +25,7 @@ prepare_sent_contributes <- function(dataset){
 sent_summary <- function(sent_df){
 
   ind <- sent_df %>%
-    select(`Operating Unit`, `Indicator Bundle`, `Indicator`, sentiment) %>%
+    select(any_of(`Operating Unit`, `Indicator Bundle`, `Indicator`, sentiment)) %>%
     group_by(`Operating Unit`, `Indicator Bundle`, `Indicator`) %>%
     summarize(total = sum(sentiment, na.rm = T)) %>%
     ungroup()
