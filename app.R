@@ -26,6 +26,7 @@ options(shiny.maxRequestSize=4000*1024^2)
 source("./functions/data_management.R")
 source("./functions/sentiments_management.R")
 source("./functions/bigrams_management.R")
+source("./functions/get_s3_choices.R")
 
 ##### Modules ####
 source("./modules/mod_home.R")
@@ -53,6 +54,11 @@ negationwords <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-d
 
 covidwords    <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing",
                          sheet = "Covidwords")
+
+nar <- get_s3_choices(type = "narratives")
+
+mer <- get_s3_choices(type = "mer")
+
 #--------------------------------------------------------------------------------------------#
 #### UI: Sidebar ####
 sidebar <- dashboardSidebar(
@@ -62,12 +68,22 @@ sidebar <- dashboardSidebar(
     menuItem("Ngrams Explorer",   tabName = "impacttable", icon = icon("compass")),
     menuItem("MER Triangulation", tabName = "triangulate", icon = icon("puzzle-piece")),
     menuItem("Resources",         tabName = "resources",   icon = icon("book")),
-    fileInput("n_path",
+    selectizeInput("n_path",
               shiny::HTML("<span style='color: white'>Choose Narratives File (xlsx)</span>"),
-              multiple = FALSE),
-    fileInput("m_path",
+              choices = list("narratives" = nar$file_names),
+              options = list(
+                placeholder = 'Please select an option',
+                onInitialize = I('function() { this.setValue(""); }')
+              )
+              ),
+    selectizeInput("m_path",
               shiny::HTML("<span style='color: white'>Choose MSD File (txt)</span>"),
-              multiple = FALSE)
+              choices = list("mer" = mer$file_names),
+              options = list(
+                placeholder = 'Please select an option',
+                onInitialize = I('function() { this.setValue(""); }')
+              )
+              )
   )
 )
 
@@ -97,43 +113,43 @@ ui <- dashboardPage(
 #--------------------------------------------------------------------------------------------#
 #### SERVER ####
 server <- function(input, output, session){
-  
+
   # Import Datasets
   msd_df <- reactive({
     req(input$m_path)
-    msd_import(input$m_path$datapath)
+    print(input$m_path)
+    msd_import(mer[mer$file_names %in% input$m_path, "path_names"])
   })
-  
+
   narratives_df <- reactive({
     req(input$n_path)
-    filter(read_excel(input$n_path$datapath, col_types = "text", skip = 7), !str_detect(`Operating Unit`, "Office"))
+    print(input$n_path)
+    nar_import(nar[nar$file_names %in% input$n_path, "path_names"])
   })
-  
-  prepared_dfs <- reactive({
 
+    prepared_dfs <- reactive({
     bigrams <- prepare_bigrams(narratives_df(), bing, stopwords, negationwords)
     sents   <- prepare_sentiments(bigrams)
     #sents_c <- prepare_sent_contributes(bigrams)
     return(list(bigrams, sents))
 
   })
-  
+
   #prepared_dfs <- reactive({list(bigrams, sents, sents_c)})
-  
-  
+
+
   # Server Modules
   dashboard_server("d", narratives_df(), prepared_dfs())
-  
+
   impact_server("i", narratives_df())
-  
+
   resources_server("r", bing, stopwords, covidwords)
-  
+
   triangulation_server("t", narratives_df(), msd_df())
-  
+
 }
-                      
+
 
 
 #--------------------------------------------------------------------------------------------#
 shinyApp(ui = ui, server = server)
-
