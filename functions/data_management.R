@@ -31,9 +31,19 @@ nar_import <- function(nar_txt){
 
   new_nar <- aws.s3::s3read_using(FUN = readxl::read_excel, col_types = "text",
                                   skip = 7, bucket = "sandbox.pepfar.data.data-extracts", object = nar_txt)
-
-  new_nar <- filter(new_nar, !stringr::str_detect(`Operating Unit`, "Office"))
-
+  
+  #remove office locations
+  new_nar <- new_nar[!(grepl("Office", new_nar$`Operating Unit`)),]
+  
+  #remove first row (blank)
+  new_nar <- new_nar[-1,]
+  
+  #remove all NA columns
+  new_nar <- new_nar[,colSums(is.na(new_nar))<nrow(new_nar)]
+  
+  #change last column name to "Narrative"
+  colnames(new_nar)[length(colnames(new_nar))] <- "Narrative"
+  
   return(new_nar)
 }
 
