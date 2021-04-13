@@ -4,7 +4,8 @@ library(readxl)
 get_s3_choices <- function(type) {
 
 Sys.setenv(
-    AWS_PROFILE = "AWS-SANDBOX-SYSTEM_NARRATIVES"
+    AWS_PROFILE = "AWS-SANDBOX-SYSTEM_NARRATIVES",
+    AWS_DEFAULT_REGION ="us-east-2"
   )
 
 #Lists all of bucket contents
