@@ -3,12 +3,9 @@ library(readxl)
 
 get_s3_choices <- function(type) {
 
-#AWS-SANDBOX-SYSTEM_NARRATIVES
 Sys.setenv(
-  "AWS_ACCESS_KEY_ID" = "",
-  "AWS_SECRET_ACCESS_KEY" = "",
-  "AWS_DEFAULT_REGION" = "us-east-2"
-)
+    AWS_PROFILE = "AWS-SANDBOX-SYSTEM_NARRATIVES"
+  )
 
 #Lists all of bucket contents
 choices <- aws.s3::get_bucket(bucket = "sandbox.pepfar.data.data-extracts")
