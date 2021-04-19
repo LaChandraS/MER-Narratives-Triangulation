@@ -67,8 +67,9 @@ sidebar <- dashboardSidebar(sidebarMenu(menuItem("Home", tabName = "home", icon 
         choices = list(narratives = nar$file_names), options = list(placeholder = "Please select an option", 
             onInitialize = I("function() { this.setValue(\"\"); }"))), selectizeInput("m_path", 
         shiny::HTML("<span style='color: white'>Choose MSD File (txt)</span>"), choices = list(mer = mer$file_names), 
-        options = list(placeholder = "Please select an option", onInitialize = I("function() { this.setValue(\"\"); }")))), 
-    busyIndicator())
+        options = list(placeholder = "Please select an option", onInitialize = I("function() { this.setValue(\"\"); }"))))
+     #,busyIndicator()
+    )
 
 
 #### UI: Body ####
