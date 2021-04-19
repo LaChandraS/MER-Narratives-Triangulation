@@ -14,7 +14,7 @@ library(igraph)
 library(ggraph)
 library(leaflet)
 library(crayon)
-library(shinysky)
+#library(shinysky)
 
 # Diagnostics library(profvis) library(reactlog)
 
