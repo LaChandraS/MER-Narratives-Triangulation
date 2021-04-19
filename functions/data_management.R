@@ -27,15 +27,19 @@ msd_import <- function(msd_txt){
   return(new_msd)
 }
 
-nar_import <- function(nar_txt){
-
+nar_import <- function(nar_txt = NULL, merged_file = NULL){
+  
   new_nar <- aws.s3::s3read_using(FUN = readxl::read_excel, col_types = "text",
                                   skip = 7, bucket = "sandbox.pepfar.data.data-extracts", object = nar_txt)
+  
+  if(!(is.null(merged_file)))
+  {return(new_nar)} else {
   
   #remove office locations
   new_nar <- new_nar[!(grepl("Office", new_nar$`Operating Unit`)),]
   
   #remove first row (blank)
+  # new_nar <- new_nar[rowSums(is.na(new_nar))<ncol(new_nar),]
   new_nar <- new_nar[-1,]
   
   #remove all NA columns
@@ -44,6 +48,6 @@ nar_import <- function(nar_txt){
   #change last column name to "Narrative"
   colnames(new_nar)[length(colnames(new_nar))] <- "Narrative"
   
-  return(new_nar)
+  return(new_nar) }
 }
 
