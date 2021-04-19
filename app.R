@@ -14,13 +14,12 @@ library(igraph)
 library(ggraph)
 library(leaflet)
 library(crayon)
+library(shinysky)
 
-# Diagnostics
-#library(profvis)
-#library(reactlog)
+# Diagnostics library(profvis) library(reactlog)
 
-options(shiny.maxRequestSize=4000*1024^2)
-#options(shiny.reactlog = TRUE)
+options(shiny.maxRequestSize = 4000 * 1024^2)
+# options(shiny.reactlog = TRUE)
 
 ##### Functions ####
 source("./functions/data_management.R")
@@ -37,23 +36,22 @@ source("./modules/mod_impacttable.R")
 source("./modules/mod_resources.R")
 source("./modules/mod_triangulation.R")
 
-#### Test Data ####
-#load("narratives_data.RData")
+#### Test Data #### load('narratives_data.RData')
 
 #### Text Resources ####
 gs4_deauth()
 
-bing          <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing",
-                         sheet = "HIV Sentiments (based on Bing et al.)")
+bing <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing", 
+    sheet = "HIV Sentiments (based on Bing et al.)")
 
-stopwords     <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing",
-                         sheet = "Stopwords")
+stopwords <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing", 
+    sheet = "Stopwords")
 
-negationwords <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing",
-                         sheet = "Negation")
+negationwords <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing", 
+    sheet = "Negation")
 
-covidwords    <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing",
-                         sheet = "Covidwords")
+covidwords <- read_sheet("https://docs.google.com/spreadsheets/d/1QAhceme-y-dJrsV4WrCk5lqzFPhLfnNfjcn9xuTHiGQ/edit?usp=sharing", 
+    sheet = "Covidwords")
 
 nar <- get_s3_choices(type = "narratives")
 
@@ -61,91 +59,69 @@ mer <- get_s3_choices(type = "mer")
 
 #--------------------------------------------------------------------------------------------#
 #### UI: Sidebar ####
-sidebar <- dashboardSidebar(
-  sidebarMenu(
-    menuItem("Home",              tabName = "home",        icon = icon("home")),
-    menuItem("Dashboard",         tabName = "analyses",    icon = icon("line-chart")),
-    menuItem("Ngrams Explorer",   tabName = "impacttable", icon = icon("compass")),
-    menuItem("MER Triangulation", tabName = "triangulate", icon = icon("puzzle-piece")),
-    menuItem("Resources",         tabName = "resources",   icon = icon("book")),
-    selectizeInput("n_path",
-              shiny::HTML("<span style='color: white'>Choose Narratives File (xlsx)</span>"),
-              choices = list("narratives" = nar$file_names),
-              options = list(
-                placeholder = 'Please select an option',
-                onInitialize = I('function() { this.setValue(""); }')
-              )
-              ),
-    selectizeInput("m_path",
-              shiny::HTML("<span style='color: white'>Choose MSD File (txt)</span>"),
-              choices = list("mer" = mer$file_names),
-              options = list(
-                placeholder = 'Please select an option',
-                onInitialize = I('function() { this.setValue(""); }')
-              )
-              )
-  )
-)
+sidebar <- dashboardSidebar(sidebarMenu(menuItem("Home", tabName = "home", icon = icon("home")), 
+    menuItem("Dashboard", tabName = "analyses", icon = icon("line-chart")), menuItem("Ngrams Explorer", 
+        tabName = "impacttable", icon = icon("compass")), menuItem("MER Triangulation", 
+        tabName = "triangulate", icon = icon("puzzle-piece")), menuItem("Resources", tabName = "resources", 
+        icon = icon("book")), selectizeInput("n_path", shiny::HTML("<span style='color: white'>Choose Narratives File (xlsx)</span>"), 
+        choices = list(narratives = nar$file_names), options = list(placeholder = "Please select an option", 
+            onInitialize = I("function() { this.setValue(\"\"); }"))), selectizeInput("m_path", 
+        shiny::HTML("<span style='color: white'>Choose MSD File (txt)</span>"), choices = list(mer = mer$file_names), 
+        options = list(placeholder = "Please select an option", onInitialize = I("function() { this.setValue(\"\"); }")))), 
+    busyIndicator())
 
 
 #### UI: Body ####
-body <- dashboardBody(
-  shinyDashboardThemes(theme = "poor_mans_flatly"),
-  tabItems(
-    tabItem(tabName = "home",        home_ui()),
-    tabItem(tabName = "analyses",    dashboard_ui("d")),
-    tabItem(tabName = "impacttable", impact_ui("i")),
-    tabItem(tabName = "triangulate", triangulation_ui("t")),
-    tabItem(tabName = "resources",   resources_ui("r"))
-  )
-)
+body <- dashboardBody(shinyDashboardThemes(theme = "poor_mans_flatly"), tabItems(tabItem(tabName = "home", 
+    home_ui()), tabItem(tabName = "analyses", dashboard_ui("d")), tabItem(tabName = "impacttable", 
+    impact_ui("i")), tabItem(tabName = "triangulate", triangulation_ui("t")), tabItem(tabName = "resources", 
+    resources_ui("r"))))
 
 
 #### UI ####
-ui <- dashboardPage(
-  title = "Narrator",
-  dashboardHeader(title = "Narratives Application"),
-  sidebar,
-  body
-)
+ui <- dashboardPage(title = "Narrator", dashboardHeader(title = "Narratives Application"), 
+    sidebar, body)
 
 
 #--------------------------------------------------------------------------------------------#
 #### SERVER ####
-server <- function(input, output, session){
+server <- function(input, output, session) {
 
-  # Import Datasets
-  msd_df <- reactive({
-    req(input$m_path)
-    print(input$m_path)
-    msd_import(mer[mer$file_names %in% input$m_path, "path_names"])
-  })
+    # Import Datasets
+    msd_df <- reactive({
+        req(input$m_path)
+        msd_import(mer[mer$file_names %in% input$m_path, "path_names"])
+    })
 
-  narratives_df <- reactive({
-    req(input$n_path)
-    print(input$n_path)
-    nar_import(nar[nar$file_names %in% input$n_path, "path_names"])
-  })
+    narratives_df <- reactive({
+        req(input$n_path)
+        if (grepl("merged", input$n_path)) {
+            merged_file = T
+        } else {
+            merged_file = NULL
+        }
+        nar_import(nar[nar$file_names %in% input$n_path, "path_names"], merged_file = merged_file)
+    })
 
     prepared_dfs <- reactive({
-    bigrams <- prepare_bigrams(narratives_df(), bing, stopwords, negationwords)
-    sents   <- prepare_sentiments(bigrams)
-    #sents_c <- prepare_sent_contributes(bigrams)
-    return(list(bigrams, sents))
+        bigrams <- prepare_bigrams(narratives_df(), bing, stopwords, negationwords)
+        sents <- prepare_sentiments(bigrams)
+        # sents_c <- prepare_sent_contributes(bigrams)
+        return(list(bigrams, sents))
 
-  })
+    })
 
-  #prepared_dfs <- reactive({list(bigrams, sents, sents_c)})
+    # prepared_dfs <- reactive({list(bigrams, sents, sents_c)})
 
 
-  # Server Modules
-  dashboard_server("d", narratives_df(), prepared_dfs())
+    # Server Modules
+    dashboard_server("d", narratives_df(), prepared_dfs())
 
-  impact_server("i", narratives_df())
+    impact_server("i", narratives_df())
 
-  resources_server("r", bing, stopwords, covidwords)
+    resources_server("r", bing, stopwords, covidwords)
 
-  triangulation_server("t", narratives_df(), msd_df())
+    triangulation_server("t", narratives_df(), msd_df())
 
 }
 
