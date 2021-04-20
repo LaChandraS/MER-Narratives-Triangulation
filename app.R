@@ -14,6 +14,7 @@ library(igraph)
 library(ggraph)
 library(leaflet)
 library(crayon)
+if (!require("shinysky")) devtools::install_github("AnalytixWare/ShinySky")
 library(shinysky)
 
 # Diagnostics library(profvis) library(reactlog)
