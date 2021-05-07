@@ -1,10 +1,30 @@
 library(aws.s3)
 library(readxl)
+library(paws)
 
 get_s3_choices <- function(type)
 {
   
-  Sys.setenv(AWS_PROFILE = "AWS-SANDBOX-SYSTEM_NARRATIVES", AWS_DEFAULT_REGION = "us-east-2")
+  Sys.setenv(AWS_PROFILE = "AWS-SANDBOX-SYSTEM_NARRATIVES", AWS_DEFAULT_REGION = "us-east-2",
+             AWS_REGION = "us-east-2")
+  
+  svc <- secretsmanager()
+  
+  see <- svc$get_secret_value(
+    SecretId = "system_narratives_1AOdf2WRb7"
+  )
+  
+  see <- fromJSON(see$SecretString)
+  
+  
+  Sys.setenv(AWS_ACCESS_KEY_ID = see$aws_access_key, 
+             AWS_SECRET_ACCESS_KEY = see$aws_secret_access_key,
+             AWS_PROFILE = "AWS-SANDBOX-SYSTEM_NARRATIVES", 
+             AWS_DEFAULT_REGION = "us-east-2",
+             AWS_REGION = "us-east-2")
+  
+  rm(see)
+  rm(svc)
   
   # Lists all of bucket contents
   choices <- aws.s3::get_bucket(bucket = "sandbox.pepfar.data.data-extracts")
