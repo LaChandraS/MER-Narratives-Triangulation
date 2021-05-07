@@ -44,7 +44,7 @@ triangulation_server <- function(id, n_df, m_df){
     
     # Sub-Module Outputs
     output$narrativesdt <- DT::renderDataTable({
-      DT::datatable(ui_info[[1]]()[,c(1,3,5,6,7,12)], # Pass UI selector input?
+      DT::datatable(ui_info[[1]]()[,c(1,3,5,6,7,11)], # Pass UI selector input?
                     selection = "single",
                     rownames=FALSE,
                     filter="top",
@@ -69,7 +69,7 @@ triangulation_server <- function(id, n_df, m_df){
     support_name       <- reactive({req(row_count())
       narratives()[[row_count(), 6]]})
     narratives_content <- reactive({req(row_count())
-      narratives()[[row_count(), 12]]})
+      narratives()[[row_count(), 11]]})
     
     # Narratives summary after user selection
     output$title <- renderText({

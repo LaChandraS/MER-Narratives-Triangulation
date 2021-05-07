@@ -36,8 +36,8 @@ impact_server <- function(id, n_df){
       DT::datatable(
         ui_info[[1]]() %>%
           unnest_tokens(ngram, Narrative, token = "ngrams", n = ngram_num()) %>%
-          unite("Name", c("Operating Unit", "Org Level", "Organisation Site")) %>%
-          select(-c("Fiscal Year", "Fiscal Quarter", "Metrics")),
+          unite("Name", any_of(c("Operating Unit", "Org Level", "Organisation Site"))) %>%
+          select(-any_of(c("Fiscal Year", "Fiscal Quarter", "Metrics"))),
         
         extensions = 'Buttons',
         #rownames=FALSE,
@@ -57,7 +57,7 @@ impact_server <- function(id, n_df){
           group_by(`Operating Unit`,`Org Level`, `Organisation Site`, `Indicator Bundle`, Indicator, `Support Type`, `Funding Mechanism`, `Implementing Mechanism`) %>%
           summarise(Sentences = paste0(sentence, collapse = "[...]")) %>%
           ungroup() %>%
-          unite("Name", c("Operating Unit", "Org Level", "Organisation Site")), 
+          unite("Name", any_of(c("Operating Unit", "Org Level", "Organisation Site"))), 
         
         extensions = 'Buttons',
         #rownames=FALSE,
